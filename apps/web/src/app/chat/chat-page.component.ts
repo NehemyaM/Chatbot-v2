@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import DOMPurify from 'dompurify';
+import { marked } from 'marked';
 import { Subscription } from 'rxjs';
 
 import { ChatApiService } from './chat-api.service';
@@ -236,6 +238,47 @@ export class ChatPageComponent {
     this.isSidebarCollapsed.update((isCollapsed) => !isCollapsed);
   }
 
+  // Render assistant text as sanitized markdown for richer replies.
+  renderAssistantMessage(message: ChatMessage): string {
+    const html = marked.parse(message.content, {
+      async: false,
+      breaks: true,
+      gfm: true
+    });
+
+    const sanitizedHtml = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+    return addCodeCopyButtons(sanitizedHtml);
+  }
+
+  // Copy one whole assistant reply.
+  copyAssistantMessage(message: ChatMessage, event: MouseEvent): void {
+    event.stopPropagation();
+    void this.copyToClipboard(message.content);
+  }
+
+  // Handle code block copy buttons rendered inside markdown HTML.
+  onAssistantContentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    const copyButton = target?.closest('.code-copy-button') as HTMLButtonElement | null;
+
+    if (!copyButton) {
+      return;
+    }
+
+    const codeElement = copyButton.parentElement?.querySelector('pre code');
+
+    if (!codeElement) {
+      return;
+    }
+
+    void this.copyToClipboard(codeElement.textContent || '');
+    copyButton.textContent = 'Copied';
+
+    window.setTimeout(() => {
+      copyButton.textContent = 'Copy';
+    }, 1200);
+  }
+
   // Close open sidebar menus when another action takes over.
   private closeConversationMenu(): void {
     this.menuConversationId.set(null);
@@ -317,6 +360,28 @@ export class ChatPageComponent {
     );
   }
 
+  // Use the Clipboard API first and fall back for older browser contexts.
+  private async copyToClipboard(text: string): Promise<void> {
+    if (!text) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.append(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand('copy');
+      textarea.remove();
+    }
+  }
+
   // Keep the latest assistant text visible while streaming.
   private queueScrollToBottom(): void {
     window.setTimeout(() => {
@@ -376,4 +441,11 @@ function extractTextDelta(event: ChatStreamEvent): string {
 // Detect stream completion events from the mock service or OpenAI.
 function isDoneEvent(event: ChatStreamEvent): boolean {
   return event.event === 'message.done' || event.event === 'response.completed';
+}
+
+// Add a copy button above each markdown code block.
+function addCodeCopyButtons(html: string): string {
+  return html.replace(/<pre><code[\s\S]*?<\/code><\/pre>/g, (block) => {
+    return `<div class="code-block">${block}<button type="button" class="code-copy-button">Copy</button></div>`;
+  });
 }

@@ -41,6 +41,7 @@ docker compose up --build
 ## Environment
 
 Copy `.env.example` to `.env` and fill in real secrets before production use.
+The root `npm run dev` command now loads `.env` and `.env.local` automatically, so restart the backend after updating either file.
 
 ## Architecture
 

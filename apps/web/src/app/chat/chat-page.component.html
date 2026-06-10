@@ -95,7 +95,25 @@
           <div class="message-avatar">{{ message.role === 'user' ? 'U' : 'AI' }}</div>
           <div class="message-bubble" [class.is-error]="message.status === 'error'">
             @if (message.content) {
-              <p>{{ message.content }}</p>
+              @if (message.role === 'assistant') {
+                <div class="assistant-toolbar">
+                  <button
+                    class="copy-message-button"
+                    type="button"
+                    [attr.aria-label]="'Copy assistant reply'"
+                    (click)="copyAssistantMessage(message, $event)"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <div
+                  class="markdown-content"
+                  [innerHTML]="renderAssistantMessage(message)"
+                  (click)="onAssistantContentClick($event)"
+                ></div>
+              } @else {
+                <p>{{ message.content }}</p>
+              }
             } @else {
               <div class="typing-dots" aria-label="Assistant is responding">
                 <span></span>
