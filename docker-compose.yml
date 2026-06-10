@@ -1,0 +1,67 @@
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: infra/docker/node-service.Dockerfile
+    command: node services/api-gateway/src/index.js
+    environment:
+      GATEWAY_PORT: 8080
+      AUTH_SERVICE_URL: http://auth-service:4101
+      CHAT_SERVICE_URL: http://chat-service:4102
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth-service
+      - chat-service
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: infra/docker/node-service.Dockerfile
+    command: node services/auth-service/src/index.js
+    environment:
+      AUTH_SERVICE_PORT: 4101
+      JWT_SECRET: ${JWT_SECRET:-development-secret}
+
+  chat-service:
+    build:
+      context: .
+      dockerfile: infra/docker/node-service.Dockerfile
+    command: node services/chat-service/src/index.js
+    environment:
+      CHAT_SERVICE_PORT: 4102
+      OPENAI_SERVICE_URL: http://openai-service:4103
+      DATABASE_URL: postgres://chat_app:chat_app@postgres:5432/chat_app
+    depends_on:
+      - openai-service
+      - postgres
+
+  openai-service:
+    build:
+      context: .
+      dockerfile: infra/docker/node-service.Dockerfile
+    command: node services/openai-service/src/index.js
+    environment:
+      OPENAI_SERVICE_PORT: 4103
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: chat_app
+      POSTGRES_PASSWORD: chat_app
+      POSTGRES_DB: chat_app
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/database/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres-data:

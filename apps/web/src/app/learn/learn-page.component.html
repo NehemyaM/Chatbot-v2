@@ -1,0 +1,78 @@
+<main class="learn-shell">
+  <aside class="file-sidebar" aria-label="Project files">
+    <a routerLink="/" class="back-link">Back to chat</a>
+
+    <div class="sidebar-heading">
+      <p class="eyebrow">Code explorer</p>
+      <h1>Project files</h1>
+    </div>
+
+    <nav class="file-list">
+      @for (file of files; track file.id) {
+        <button
+          class="file-button"
+          type="button"
+          [class.is-active]="file.id === selectedFileId()"
+          (click)="selectFile(file.id)"
+        >
+          <span>{{ file.label }}</span>
+          <small>{{ file.layer }}</small>
+        </button>
+      }
+    </nav>
+  </aside>
+
+  <section class="file-detail">
+    <header class="detail-header">
+      <p class="eyebrow">{{ selectedFile().layer }}</p>
+      <h2>{{ selectedFile().label }}</h2>
+      <code>{{ selectedFile().path }}</code>
+    </header>
+
+    <section class="detail-card">
+      <h3>Role In The Project</h3>
+      <p>{{ selectedFile().role }}</p>
+    </section>
+
+    <div class="data-grid">
+      <section class="detail-card">
+        <h3>Receives Data From</h3>
+        <ul>
+          @for (item of selectedFile().receivesFrom; track item) {
+            <li>{{ item }}</li>
+          }
+        </ul>
+      </section>
+
+      <section class="detail-card">
+        <h3>Sends Data To</h3>
+        <ul>
+          @for (item of selectedFile().sendsTo; track item) {
+            <li>{{ item }}</li>
+          }
+        </ul>
+      </section>
+    </div>
+
+    <section class="detail-card">
+      <h3>Important Functions / Template Parts</h3>
+      <div class="function-list">
+        @for (fn of selectedFile().functions; track fn.name) {
+          <article>
+            <code>{{ fn.name }}</code>
+            <p>{{ fn.purpose }}</p>
+          </article>
+        }
+      </div>
+    </section>
+
+    <section class="detail-card">
+      <h3>Topics Used</h3>
+      <div class="topic-list">
+        @for (topic of selectedFile().topics; track topic) {
+          <span>{{ topic }}</span>
+        }
+      </div>
+    </section>
+  </section>
+</main>

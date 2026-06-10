@@ -1,0 +1,165 @@
+<main class="chat-shell" [class.is-sidebar-collapsed]="isSidebarCollapsed()">
+  <aside class="sidebar" aria-label="Chat history">
+    <div class="sidebar-actions">
+      <button class="new-chat-button" type="button" (click)="startNewChat()">New chat</button>
+      <button
+        class="icon-button"
+        type="button"
+        [attr.aria-label]="isSidebarCollapsed() ? 'Show sidebar' : 'Hide sidebar'"
+        (click)="toggleSidebar()"
+      >
+        {{ isSidebarCollapsed() ? '>' : '<' }}
+      </button>
+    </div>
+
+    <nav class="conversation-list" aria-label="Conversations">
+      @if (isLoadingConversations()) {
+        <p class="sidebar-note">Loading chats...</p>
+      } @else if (conversations().length === 0) {
+        <p class="sidebar-note">No saved chats yet</p>
+      }
+
+      @for (conversation of conversations(); track conversation.id) {
+        <div class="conversation-item" [class.is-active]="conversation.id === activeConversationId()">
+          <button class="conversation-button" type="button" (click)="openConversation(conversation.id)">
+            <span class="conversation-title">{{ conversation.title }}</span>
+            <span class="conversation-meta">{{ conversation.messageCount }} messages</span>
+          </button>
+
+          <button
+            class="conversation-options-button"
+            type="button"
+            [attr.aria-label]="'Options for ' + conversation.title"
+            (click)="toggleConversationMenu(conversation.id, $event)"
+          >
+            ...
+          </button>
+
+          @if (menuConversationId() === conversation.id) {
+            <div class="conversation-menu" (click)="$event.stopPropagation()">
+              <button type="button" (click)="startRename(conversation, $event)">Rename</button>
+              <button class="danger-action" type="button" (click)="deleteConversation(conversation.id, $event)">
+                Delete
+              </button>
+            </div>
+          }
+
+          @if (renamingConversationId() === conversation.id) {
+            <form
+              class="rename-form"
+              (click)="$event.stopPropagation()"
+              (submit)="$event.preventDefault(); saveRename(conversation.id)"
+            >
+              <input
+                name="title"
+                aria-label="Conversation title"
+                [ngModel]="renameDraft()"
+                (ngModelChange)="renameDraft.set($event)"
+              />
+              <button type="submit">Save</button>
+              <button type="button" (click)="cancelRename()">Cancel</button>
+            </form>
+          }
+        </div>
+      }
+    </nav>
+  </aside>
+
+  <section class="chat-panel">
+    <header class="chat-header">
+      <div class="header-title">
+        @if (isSidebarCollapsed()) {
+          <button class="icon-button header-toggle" type="button" aria-label="Show sidebar" (click)="toggleSidebar()">></button>
+        }
+
+        <div>
+          <p class="eyebrow">Chat Assistant</p>
+          <h1>{{ activeConversationTitle() }}</h1>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a routerLink="/learn" class="learn-link">Learn flow</a>
+        <span class="status-pill">{{ isStreaming() ? 'Responding' : 'Ready' }}</span>
+      </div>
+    </header>
+
+    <div #messagesViewport class="messages-viewport">
+      @if (!hasMessages()) {
+        <div class="empty-state">
+          <h2>What can I help with?</h2>
+        </div>
+      }
+
+      @for (message of messages(); track message.id) {
+        <article class="message-row" [class.is-user]="message.role === 'user'">
+          <div class="message-avatar">{{ message.role === 'user' ? 'U' : 'AI' }}</div>
+          <div class="message-bubble" [class.is-error]="message.status === 'error'">
+            @if (message.content) {
+              <p>{{ message.content }}</p>
+            } @else {
+              <div class="typing-dots" aria-label="Assistant is responding">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            }
+
+            @if (message.status === 'streaming' && message.content) {
+              <span class="typing-cursor" aria-hidden="true"></span>
+            }
+          </div>
+        </article>
+      }
+    </div>
+
+    <form class="composer" (click)="$event.stopPropagation()" (ngSubmit)="sendMessage()">
+      <input #fileInput class="file-input" type="file" multiple (change)="addAttachments($event)" />
+
+      @if (attachments().length > 0) {
+        <div class="attachment-chips">
+          @for (attachment of attachments(); track attachment.id) {
+            <span class="attachment-chip">
+              {{ attachment.name }}
+              <button type="button" [attr.aria-label]="'Remove ' + attachment.name" (click)="removeAttachment(attachment.id)">
+                x
+              </button>
+            </span>
+          }
+        </div>
+      }
+
+      <div class="attachment-control">
+        <button
+          class="attachment-button"
+          type="button"
+          aria-label="Add attachment"
+          (click)="toggleAttachmentMenu($event)"
+        >
+          +
+        </button>
+
+        @if (attachmentMenuOpen()) {
+          <div class="attachment-menu">
+            <button type="button" (click)="chooseAttachment('file', $event)">Add file</button>
+            <button type="button" (click)="chooseAttachment('image', $event)">Add image</button>
+          </div>
+        }
+      </div>
+
+      <textarea
+        name="message"
+        rows="1"
+        placeholder="Message Chat Assistant"
+        [ngModel]="draft()"
+        (ngModelChange)="draft.set($event)"
+        (keydown)="submitFromKeyboard($event)"
+      ></textarea>
+
+      @if (isStreaming()) {
+        <button class="composer-button secondary" type="button" (click)="stopResponse()">Stop</button>
+      } @else {
+        <button class="composer-button" type="submit" [disabled]="!draft().trim()">Send</button>
+      }
+    </form>
+  </section>
+</main>

@@ -1,0 +1,27 @@
+{
+  "name": "chatgpt-like-microservices",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "npm run start --workspace apps/web --",
+    "build:web": "npm run build --workspace apps/web",
+    "dev:gateway": "node services/api-gateway/src/index.js",
+    "dev:auth": "node services/auth-service/src/index.js",
+    "dev:chat": "node services/chat-service/src/index.js",
+    "dev:openai": "node services/openai-service/src/index.js",
+    "check": "node --check services/api-gateway/src/index.js && node --check services/auth-service/src/index.js && node --check services/chat-service/src/index.js && node --check services/chat-service/src/chat-repository.js && node --check services/openai-service/src/index.js && node --check packages/shared/src/http.js"
+  },
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "pg": "^8.21.0"
+  }
+}
