@@ -11,7 +11,8 @@
     "dev:auth": "node services/auth-service/src/index.js",
     "dev:chat": "node services/chat-service/src/index.js",
     "dev:openai": "node services/openai-service/src/index.js",
-    "check": "node --check services/api-gateway/src/index.js && node --check services/auth-service/src/index.js && node --check services/chat-service/src/index.js && node --check services/chat-service/src/chat-repository.js && node --check services/openai-service/src/index.js && node --check packages/shared/src/http.js"
+    "start:backend": "node scripts/start-backend.mjs",
+    "check": "node --check scripts/start-backend.mjs && node --check services/api-gateway/src/index.js && node --check services/auth-service/src/index.js && node --check services/chat-service/src/index.js && node --check services/chat-service/src/chat-repository.js && node --check services/openai-service/src/index.js && node --check packages/shared/src/http.js"
   },
   "workspaces": [
     "apps/*",
@@ -22,6 +23,7 @@
     "node": ">=22"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "pg": "^8.21.0"
   }
 }

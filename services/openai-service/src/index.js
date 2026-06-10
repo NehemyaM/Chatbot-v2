@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { getPath, json, listen, methodNotAllowed, readJson, sseHeaders, writeSse } from "../../../packages/shared/src/http.js";
 
 const port = Number(process.env.OPENAI_SERVICE_PORT || 4103);

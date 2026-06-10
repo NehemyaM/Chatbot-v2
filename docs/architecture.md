@@ -104,14 +104,15 @@ After the first working chatbot, add:
 When running locally:
 
 - Gateway health: `GET http://localhost:8080/health`
-- Register: `POST http://localhost:8080/api/auth/register`
+- Register: disabled for this prototype
 - Login: `POST http://localhost:8080/api/auth/login`
-- Stream chat: `POST http://localhost:8080/api/chat/stream`
+- Stream chat: `POST http://localhost:8080/api/chat/stream` with a bearer token
 
 Example streaming request:
 
 ```bash
 curl -N http://localhost:8080/api/chat/stream \
+  -H "authorization: Bearer <token-from-login>" \
   -H "content-type: application/json" \
   -d '{"messages":[{"role":"user","content":"Hello"}]}'
 ```

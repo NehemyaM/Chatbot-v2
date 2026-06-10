@@ -12,8 +12,23 @@
       </button>
     </div>
 
+    <section class="auth-card">
+      @if (isLoggedIn()) {
+        <span class="auth-kicker">Signed in</span>
+        <strong>{{ session()?.user?.name }}</strong>
+        <button type="button" (click)="logout()">Log out</button>
+      } @else {
+        <span class="auth-kicker">Locked</span>
+        <strong>Login required</strong>
+        <p>Only approved demo users can access this chatbot.</p>
+        <button type="button" (click)="openAuthModal('Log in to use this chatbot.')">Log in</button>
+      }
+    </section>
+
     <nav class="conversation-list" aria-label="Conversations">
-      @if (isLoadingConversations()) {
+      @if (!isLoggedIn()) {
+        <p class="sidebar-note">Sign in with an approved account to use chat history.</p>
+      } @else if (isLoadingConversations()) {
         <p class="sidebar-note">Loading chats...</p>
       } @else if (conversations().length === 0) {
         <p class="sidebar-note">No saved chats yet</p>
@@ -79,9 +94,31 @@
       </div>
       <div class="header-actions">
         <a routerLink="/learn" class="learn-link">Learn flow</a>
-        <span class="status-pill">{{ isStreaming() ? 'Responding' : 'Ready' }}</span>
+        @if (!isLoggedIn()) {
+          <button class="header-login-button" type="button" (click)="openAuthModal('Log in to save your conversations.')">
+            Log in
+          </button>
+        }
+        <span class="status-pill" [class.is-running]="isStreaming()">{{ runningStatusLabel() }}</span>
       </div>
     </header>
+
+    <div class="error-slot">
+      @if (errorNotice(); as notice) {
+        <section class="error-banner" role="alert" aria-live="polite">
+          <div>
+            <strong>{{ notice.title }}</strong>
+            <span>{{ notice.message }}</span>
+          </div>
+          <div class="error-actions">
+            @if (notice.canRetry) {
+              <button type="button" (click)="retryFailedResponse()">Retry</button>
+            }
+            <button type="button" (click)="clearError()">Dismiss</button>
+          </div>
+        </section>
+      }
+    </div>
 
     <div #messagesViewport class="messages-viewport">
       @if (!hasMessages()) {
@@ -96,34 +133,51 @@
           <div class="message-bubble" [class.is-error]="message.status === 'error'">
             @if (message.content) {
               @if (message.role === 'assistant') {
-                <div class="assistant-toolbar">
-                  <button
-                    class="copy-message-button"
-                    type="button"
-                    [attr.aria-label]="'Copy assistant reply'"
-                    (click)="copyAssistantMessage(message, $event)"
-                  >
-                    Copy
-                  </button>
-                </div>
                 <div
                   class="markdown-content"
                   [innerHTML]="renderAssistantMessage(message)"
                   (click)="onAssistantContentClick($event)"
                 ></div>
+                @if (message.status === 'complete') {
+                  <div class="assistant-toolbar">
+                    <button
+                      class="copy-message-button"
+                      type="button"
+                      [attr.aria-label]="'Copy assistant reply'"
+                      (click)="copyAssistantMessage(message, $event)"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                }
+                @if (message.status === 'error') {
+                  <div class="message-error-actions">
+                    <button type="button" (click)="retryFailedResponse()">Retry</button>
+                  </div>
+                }
               } @else {
                 <p>{{ message.content }}</p>
               }
             } @else {
-              <div class="typing-dots" aria-label="Assistant is responding">
-                <span></span>
-                <span></span>
-                <span></span>
+              <div class="thinking-line">
+                <div class="typing-dots" aria-label="Assistant is thinking">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                @if (message.status === 'streaming') {
+                  <span class="thinking-time">{{ formatElapsedTime(responseElapsedSeconds()) }}</span>
+                  <button class="terminate-inline-button" type="button" (click)="terminateResponse()">Terminate</button>
+                }
               </div>
             }
 
             @if (message.status === 'streaming' && message.content) {
               <span class="typing-cursor" aria-hidden="true"></span>
+              <div class="stream-actions">
+                <span>{{ formatElapsedTime(responseElapsedSeconds()) }}</span>
+                <button class="terminate-inline-button" type="button" (click)="terminateResponse()">Terminate</button>
+              </div>
             }
           </div>
         </article>
@@ -151,6 +205,7 @@
           class="attachment-button"
           type="button"
           aria-label="Add attachment"
+          [disabled]="!isLoggedIn()"
           (click)="toggleAttachmentMenu($event)"
         >
           +
@@ -168,16 +223,63 @@
         name="message"
         rows="1"
         placeholder="Message Chat Assistant"
+        [disabled]="!isLoggedIn()"
         [ngModel]="draft()"
         (ngModelChange)="draft.set($event)"
         (keydown)="submitFromKeyboard($event)"
       ></textarea>
 
       @if (isStreaming()) {
-        <button class="composer-button secondary" type="button" (click)="stopResponse()">Stop</button>
+        <button class="composer-button secondary" type="button" (click)="terminateResponse()">Terminate</button>
       } @else {
-        <button class="composer-button" type="submit" [disabled]="!draft().trim()">Send</button>
+        <button class="composer-button" type="submit" [disabled]="!isLoggedIn() || !draft().trim()">Send</button>
       }
     </form>
   </section>
+
+  @if (isAuthModalOpen()) {
+    <div class="auth-modal-backdrop" role="presentation" (click)="closeAuthModal()">
+      <section class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title" (click)="$event.stopPropagation()">
+        <button class="auth-close-button" type="button" aria-label="Close login" (click)="closeAuthModal()">x</button>
+
+        <div class="auth-modal-copy">
+          <span class="auth-kicker">Private prototype</span>
+          <h2 id="auth-title">Log in to use the chatbot</h2>
+          <p>Access is limited to approved demo accounts. Enter your email and password to continue.</p>
+        </div>
+
+        <form class="auth-form" (submit)="$event.preventDefault(); login()">
+          <label>
+            Email
+            <input
+              name="email"
+              type="email"
+              autocomplete="username"
+              [ngModel]="loginEmail()"
+              (ngModelChange)="loginEmail.set($event)"
+            />
+          </label>
+
+          <label>
+            Password
+            <input
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              [ngModel]="loginPassword()"
+              (ngModelChange)="loginPassword.set($event)"
+            />
+          </label>
+
+          @if (loginError()) {
+            <p class="auth-error">{{ loginError() }}</p>
+          }
+
+          <button class="auth-submit-button" type="submit" [disabled]="isLoggingIn()">
+            {{ isLoggingIn() ? 'Signing in...' : 'Log in' }}
+          </button>
+        </form>
+      </section>
+    </div>
+  }
 </main>

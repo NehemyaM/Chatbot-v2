@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { getPath, json, listen, methodNotAllowed, readJson } from "../../../packages/shared/src/http.js";
 import { createChatRepository } from "./chat-repository.js";
@@ -11,23 +12,28 @@ async function streamFromAiService(req, res) {
   const body = await readJson(req);
   const conversationId = body.conversationId || randomUUID();
   const messages = body.messages || [];
+  const shouldSave = body.save !== false;
   const latestUserMessage = messages.at(-1);
   const title = latestUserMessage?.content?.slice(0, 48) || "New chat";
+  let modelMessages = messages.map(normalizeIncomingMessage);
 
-  await repository.ensureConversation({ id: conversationId, title });
+  if (shouldSave) {
+    await repository.ensureConversation({ id: conversationId, title });
 
-  for (const message of messages) {
-    await repository.addMessage(conversationId, normalizeIncomingMessage(message));
+    for (const message of modelMessages) {
+      await repository.addMessage(conversationId, message);
+    }
+
+    const conversation = await repository.getConversation(conversationId);
+    modelMessages = conversation.messages;
   }
-
-  const conversation = await repository.getConversation(conversationId);
 
   const upstream = await fetch(new URL("/ai/stream", openAiServiceUrl), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       conversationId,
-      messages: conversation.messages
+      messages: modelMessages
     })
   });
 
@@ -51,12 +57,14 @@ async function streamFromAiService(req, res) {
     res.write(chunk);
   }
 
-  await repository.addMessage(conversationId, {
-    id: randomUUID(),
-    role: "assistant",
-    content: assistantText,
-    createdAt: new Date().toISOString()
-  });
+  if (shouldSave) {
+    await repository.addMessage(conversationId, {
+      id: randomUUID(),
+      role: "assistant",
+      content: assistantText,
+      createdAt: new Date().toISOString()
+    });
+  }
 
   res.end();
 }

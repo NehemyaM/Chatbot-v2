@@ -1,9 +1,34 @@
-import { createHmac, randomUUID } from "node:crypto";
+import "dotenv/config";
+import { createHmac } from "node:crypto";
 import { getPath, json, listen, methodNotAllowed, readJson } from "../../../packages/shared/src/http.js";
 
 const port = Number(process.env.AUTH_SERVICE_PORT || 4101);
 const jwtSecret = process.env.JWT_SECRET || "development-secret";
 const users = new Map();
+
+seedDemoUsers();
+
+// Prototype-only users so the local demo has predictable credentials.
+function seedDemoUsers() {
+  const demoUsers = [
+    {
+      id: "demo-owner",
+      email: "nehemya@demo.local",
+      password: "nehemya123",
+      name: "Nehemya"
+    },
+    {
+      id: "demo-guest",
+      email: "prototype@demo.local",
+      password: "prototype123",
+      name: "Prototype Guest"
+    }
+  ];
+
+  for (const user of demoUsers) {
+    users.set(user.email, user);
+  }
+}
 
 // Temporary token signer for the architecture phase.
 // Later this should become a real JWT implementation with expiry.
@@ -32,30 +57,7 @@ listen("auth-service", port, async (req, res) => {
   }
 
   if (path === "/auth/register") {
-    if (req.method !== "POST") {
-      methodNotAllowed(res);
-      return;
-    }
-
-    const { email, password, name } = await readJson(req);
-
-    if (!email || !password) {
-      json(res, 400, { error: "email_and_password_required" });
-      return;
-    }
-
-    if (users.has(email)) {
-      json(res, 409, { error: "user_already_exists" });
-      return;
-    }
-
-    const user = { id: randomUUID(), email, password, name: name || email.split("@")[0] };
-    users.set(email, user);
-
-    json(res, 201, {
-      user: publicUser(user),
-      token: signToken({ sub: user.id, email: user.email })
-    });
+    json(res, 403, { error: "registration_disabled" });
     return;
   }
 

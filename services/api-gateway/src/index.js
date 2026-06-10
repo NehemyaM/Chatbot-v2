@@ -1,6 +1,9 @@
+import "dotenv/config";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { json, listen, getPath } from "../../../packages/shared/src/http.js";
 
 const port = Number(process.env.GATEWAY_PORT || 8080);
+const jwtSecret = process.env.JWT_SECRET || "development-secret";
 
 const routes = [
   { prefix: "/api/auth", target: process.env.AUTH_SERVICE_URL || "http://localhost:4101" },
@@ -53,5 +56,36 @@ listen("api-gateway", port, async (req, res) => {
     return;
   }
 
+  if (route.prefix === "/api/chat" && !hasValidBearerToken(req)) {
+    json(res, 401, { error: "login_required" });
+    return;
+  }
+
   await proxy(req, res, route.target);
 });
+
+// The prototype token is signed by auth-service as base64url(payload).hmac.
+function hasValidBearerToken(req) {
+  const authorization = req.headers.authorization || "";
+  const token = authorization.startsWith("Bearer ") ? authorization.slice("Bearer ".length) : "";
+  const [body, signature] = token.split(".");
+
+  if (!body || !signature) {
+    return false;
+  }
+
+  const expectedSignature = createHmac("sha256", jwtSecret).update(body).digest("base64url");
+  const actual = Buffer.from(signature);
+  const expected = Buffer.from(expectedSignature);
+
+  if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) {
+    return false;
+  }
+
+  try {
+    const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
+    return Boolean(payload.sub && payload.email);
+  } catch {
+    return false;
+  }
+}
