@@ -26,12 +26,20 @@ const services = [
     }
   },
   {
+    name: "textbook-service",
+    script: "services/textbook-service/src/index.js",
+    env: {
+      TEXTBOOK_SERVICE_PORT: process.env.TEXTBOOK_SERVICE_PORT || "4104"
+    }
+  },
+  {
     name: "api-gateway",
     script: "services/api-gateway/src/index.js",
     env: {
       GATEWAY_PORT: gatewayPort,
       AUTH_SERVICE_URL: process.env.AUTH_SERVICE_URL || "http://127.0.0.1:4101",
-      CHAT_SERVICE_URL: process.env.CHAT_SERVICE_URL || "http://127.0.0.1:4102"
+      CHAT_SERVICE_URL: process.env.CHAT_SERVICE_URL || "http://127.0.0.1:4102",
+      TEXTBOOK_SERVICE_URL: process.env.TEXTBOOK_SERVICE_URL || "http://127.0.0.1:4104"
     }
   }
 ];

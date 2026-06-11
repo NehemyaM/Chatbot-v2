@@ -53,6 +53,22 @@ Current endpoints:
 - `GET /chat/conversations/:id`
 - `POST /chat/stream`
 
+### Textbook Service
+
+The textbook service owns uploaded textbook RAG.
+
+- Uploads user textbook files to OpenAI
+- Creates one OpenAI vector store per uploaded textbook
+- Stores textbook metadata in PostgreSQL
+- Searches only the selected textbook vector store
+- Answers with the textbook-only agent policy
+
+Current endpoints:
+
+- `GET /textbooks`
+- `POST /textbooks/upload`
+- `POST /textbooks/:id/ask`
+
 ### OpenAI Service
 
 The OpenAI service is the only service that should know the OpenAI API key.
@@ -107,6 +123,8 @@ When running locally:
 - Register: disabled for this prototype
 - Login: `POST http://localhost:8080/api/auth/login`
 - Stream chat: `POST http://localhost:8080/api/chat/stream` with a bearer token
+- Textbooks: `GET http://localhost:8080/api/textbooks` with a bearer token
+- Ask textbook: `POST http://localhost:8080/api/textbooks/:id/ask` with a bearer token
 
 Example streaming request:
 

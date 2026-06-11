@@ -14,6 +14,7 @@ const services = [
   ["openai-service", "services/openai-service/src/index.js"],
   ["auth-service", "services/auth-service/src/index.js"],
   ["chat-service", "services/chat-service/src/index.js"],
+  ["textbook-service", "services/textbook-service/src/index.js"],
   ["api-gateway", "services/api-gateway/src/index.js"]
 ];
 

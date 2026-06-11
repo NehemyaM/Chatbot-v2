@@ -3,7 +3,7 @@
 This project is easiest to host as:
 
 - Angular frontend on Vercel.
-- One backend web service on Render that starts the API gateway plus the internal auth, chat, and OpenAI services.
+- One backend web service on Render that starts the API gateway plus the internal auth, chat, textbook, and OpenAI services.
 - PostgreSQL on Supabase.
 
 ## 1. Supabase
@@ -31,6 +31,8 @@ Environment variables:
 DATABASE_URL=<your Supabase Postgres connection string>
 OPENAI_API_KEY=<your OpenAI API key>
 OPENAI_MODEL=gpt-4.1-mini
+TEXTBOOK_MODEL=gpt-4.1-mini
+OPENAI_TEXTBOOK_WORKFLOW_ID=wf_6a2a0b2a079c8190b0e8912320150fb801f1bd940b4313ac
 JWT_SECRET=<make a long random value>
 ```
 

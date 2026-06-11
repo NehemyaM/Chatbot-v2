@@ -17,7 +17,13 @@ export class PostgresChatRepository {
   // Create tables on service startup so local setup stays simple.
   async init() {
     const schema = await readFile(schemaPath, "utf8");
-    await this.pool.query(schema);
+    await this.pool.query("SELECT pg_advisory_lock(842001)");
+
+    try {
+      await this.pool.query(schema);
+    } finally {
+      await this.pool.query("SELECT pg_advisory_unlock(842001)");
+    }
   }
 
   // Return lightweight conversation rows for the sidebar.

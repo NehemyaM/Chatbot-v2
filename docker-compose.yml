@@ -8,11 +8,13 @@ services:
       GATEWAY_PORT: 8080
       AUTH_SERVICE_URL: http://auth-service:4101
       CHAT_SERVICE_URL: http://chat-service:4102
+      TEXTBOOK_SERVICE_URL: http://textbook-service:4104
     ports:
       - "8080:8080"
     depends_on:
       - auth-service
       - chat-service
+      - textbook-service
 
   auth-service:
     build:
@@ -34,6 +36,21 @@ services:
       DATABASE_URL: postgres://chat_app:chat_app@postgres:5432/chat_app
     depends_on:
       - openai-service
+      - postgres
+
+  textbook-service:
+    build:
+      context: .
+      dockerfile: infra/docker/node-service.Dockerfile
+    command: node services/textbook-service/src/index.js
+    environment:
+      TEXTBOOK_SERVICE_PORT: 4104
+      DATABASE_URL: postgres://chat_app:chat_app@postgres:5432/chat_app
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      TEXTBOOK_MODEL: ${TEXTBOOK_MODEL:-gpt-4.1-mini}
+      OPENAI_TEXTBOOK_WORKFLOW_ID: ${OPENAI_TEXTBOOK_WORKFLOW_ID:-wf_6a2a0b2a079c8190b0e8912320150fb801f1bd940b4313ac}
+    depends_on:
       - postgres
 
   openai-service:

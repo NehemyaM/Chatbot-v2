@@ -1,0 +1,85 @@
+<main class="textbook-shell">
+  <header class="textbook-header">
+    <div>
+      <a routerLink="/" class="back-link">Back to chat</a>
+      <h1>Textbook agent</h1>
+      <p>Upload a textbook, then ask questions that must be answered from that textbook only.</p>
+    </div>
+  </header>
+
+  @if (!session()) {
+    <section class="locked-panel">
+      <h2>Login required</h2>
+      <p>Open the chat page and log in before uploading textbooks.</p>
+      <a routerLink="/">Go to login</a>
+    </section>
+  } @else {
+    <section class="textbook-grid">
+      <aside class="textbook-sidebar">
+        <label class="upload-card">
+          <span>{{ isUploading() ? 'Processing textbook...' : 'Upload textbook' }}</span>
+          <input type="file" accept=".pdf,.txt,.md,.doc,.docx" [disabled]="isUploading()" (change)="uploadTextbook($event)" />
+        </label>
+
+        @if (isLoading()) {
+          <p class="muted">Loading textbooks...</p>
+        } @else if (textbooks().length === 0) {
+          <p class="muted">No textbooks uploaded yet.</p>
+        }
+
+        <div class="textbook-list">
+          @for (textbook of textbooks(); track textbook.id) {
+            <button
+              type="button"
+              [class.is-active]="textbook.id === selectedTextbookId()"
+              (click)="selectTextbook(textbook.id)"
+            >
+              <strong>{{ textbook.title }}</strong>
+              <span>{{ textbook.status }}</span>
+            </button>
+          }
+        </div>
+      </aside>
+
+      <section class="ask-panel">
+        @if (selectedTextbook(); as textbook) {
+          <div class="selected-book">
+            <span>Selected textbook</span>
+            <strong>{{ textbook.title }}</strong>
+          </div>
+        } @else {
+          <div class="selected-book">
+            <span>No textbook selected</span>
+            <strong>Upload a textbook to begin.</strong>
+          </div>
+        }
+
+        <form class="question-form" (submit)="$event.preventDefault(); askQuestion()">
+          <textarea
+            name="question"
+            rows="4"
+            placeholder="Ask a question from the selected textbook"
+            [disabled]="!selectedTextbookId() || isAsking()"
+            [ngModel]="question()"
+            (ngModelChange)="question.set($event)"
+          ></textarea>
+
+          <button type="submit" [disabled]="!selectedTextbookId() || !question().trim() || isAsking()">
+            {{ isAsking() ? 'Asking...' : 'Ask textbook' }}
+          </button>
+        </form>
+
+        @if (error()) {
+          <p class="error-message">{{ error() }}</p>
+        }
+
+        @if (answer()) {
+          <article class="answer-panel">
+            <h2>Answer</h2>
+            <p>{{ answer() }}</p>
+          </article>
+        }
+      </section>
+    </section>
+  }
+</main>
